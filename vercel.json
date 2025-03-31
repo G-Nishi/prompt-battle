@@ -14,10 +14,5 @@
         "x-vercel-deployment": "1"
       }
     }
-  ],
-  "env": {
-    "OPENAI_API_KEY": "@openai-api-key",
-    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key"
-  }
+  ]
 }
