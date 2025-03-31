@@ -19,15 +19,34 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4', // または希望するモデル
+      model: 'gpt-4-turbo-preview', // 最新のモデル指定に更新
       messages: [
         {
           role: 'system',
-          content: `あなたは次のお題に対して応答する必要があります: ${topic}`
+          content: `あなたは高度な文章生成AIです。  
+与えられた「お題」と「ユーザーのプロンプト」に従い、適切な回答を生成してください。  
+
+【入力情報】  
+- **お題**: AIが出題したお題  
+- **プロンプト**: ユーザーが考えた指示  
+
+【回答のルール】  
+1. **プロンプトに忠実に従うこと**  
+   - 文体、長さ、形式などの指示を正確に守る。  
+2. **一貫性と論理性を保つこと**  
+   - 物語の場合、ストーリーの流れを自然にする。  
+   - 説明の場合、明確で分かりやすい文章にする。  
+3. **創造性を発揮すること**  
+   - 指示の範囲内で、可能な限り独自性を持たせる。  
+4. **簡潔で明瞭な文章を作ること**  
+   - 余計な冗長表現を避け、分かりやすくする。  
+
+【出力フォーマット】  
+AIの回答のみを出力してください。`
         },
         {
           role: 'user',
-          content: prompt
+          content: `お題: ${topic}\n\nプロンプト: ${prompt}`
         }
       ],
       temperature: 0.7,
@@ -60,26 +79,80 @@ export async function PUT(request: NextRequest) {
     }
 
     const evaluationResponse = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4-turbo-preview', // 最新のモデル指定に更新
       messages: [
         {
           role: 'system',
-          content: `あなたは文章の評価者です。2つの回答を比較し、どちらがお題「${topic}」に対してより優れた回答かを判断してください。`
+          content: `あなたはAIによるプロンプト評価システムです。  
+二人のユーザーが同じお題に対して作成したプロンプトとそれに対するAIの回答を比較評価し、優れた方を選んでください。
+
+【入力情報】  
+- **お題**: AIが出題したお題  
+- **プロンプト1の回答**: 1人目のユーザーのプロンプトに基づくAIの回答
+- **プロンプト2の回答**: 2人目のユーザーのプロンプトに基づくAIの回答
+
+【評価基準】  
+1. **精度（Relevance）**: プロンプトが適切で、AIが正しく理解しやすいか？  
+2. **出力の質（Quality）**: AIの回答が論理的で、まとまりがあり、適切な内容になっているか？  
+3. **独自性（Creativity）**: 他の人と差別化できる工夫がされているか？  
+4. **明確さ（Clarity）**: 不要な情報がなく、簡潔でわかりやすいプロンプトになっているか？  
+5. **制約遵守（Adherence）**: お題の条件（例: 文体、構成など）を適切に指示できているか？  
+
+【出力フォーマット】  
+回答を詳しく分析し、以下のJSON形式で出力してください。
+
+{
+  "プレイヤー1": {
+    "精度": <0-10の数値>,
+    "出力の質": <0-10の数値>,
+    "独自性": <0-10の数値>,
+    "明確さ": <0-10の数値>,
+    "制約遵守": <0-10の数値>,
+    "総合評価": <各スコアの平均>,
+    "コメント": "<プロンプトの良かった点・改善点>"
+  },
+  "プレイヤー2": {
+    "精度": <0-10の数値>,
+    "出力の質": <0-10の数値>,
+    "独自性": <0-10の数値>,
+    "明確さ": <0-10の数値>,
+    "制約遵守": <0-10の数値>,
+    "総合評価": <各スコアの平均>,
+    "コメント": "<プロンプトの良かった点・改善点>"
+  },
+  "比較評価": "どちらのプロンプトがより優れているか、その理由を含めた総合的な評価（100-150字）",
+  "winnerId": "player1 または player2（総合評価がより高い方）"
+}`
         },
         {
           role: 'user',
-          content: `お題: ${topic}\n\n回答1: ${response1}\n\n回答2: ${response2}\n\n上記2つの回答を詳細に分析し、どちらがより優れているか判断してください。その理由も説明してください。結論として「よって、回答1の勝利とします。」または「よって、回答2の勝利とします。」と明確に記述してください。`
+          content: `お題: ${topic}\n\nプロンプト1の回答: ${response1}\n\nプロンプト2の回答: ${response2}`
         }
       ],
-      temperature: 0.7,
+      temperature: 0.5,
       max_tokens: 1000,
     });
 
     const evaluationText = evaluationResponse.choices[0].message.content || '';
-    const winner = determineWinner(evaluationText);
+    let evaluationJson;
+    
+    try {
+      evaluationJson = JSON.parse(evaluationText);
+    } catch (error) {
+      console.error('評価JSONの解析に失敗:', evaluationText);
+      throw new Error('評価結果の形式が不正です');
+    }
+    
+    const winner = evaluationJson.winnerId;
+    const evaluation = evaluationJson.比較評価 || evaluationJson.evaluation;
 
     return NextResponse.json({
-      evaluation: evaluationText,
+      evaluation: evaluation,
+      detailedEvaluation: {
+        player1: evaluationJson.プレイヤー1,
+        player2: evaluationJson.プレイヤー2,
+        summary: evaluationJson.比較評価
+      },
       winnerId: winner
     });
   } catch (error: unknown) {
@@ -90,22 +163,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// 評価テキストから勝者を抽出する
-function determineWinner(evaluationText: string): 'player1' | 'player2' {
-  const lowerCaseText = evaluationText.toLowerCase();
-  
-  if (lowerCaseText.includes('回答1の勝利') || 
-      lowerCaseText.includes('回答１の勝利') ||
-      lowerCaseText.includes('回答 1 の勝利')) {
-    return 'player1';
-  } else if (lowerCaseText.includes('回答2の勝利') || 
-             lowerCaseText.includes('回答２の勝利') ||
-             lowerCaseText.includes('回答 2 の勝利')) {
-    return 'player2';
-  }
-  
-  // デフォルト値（テキスト分析が不明確な場合）
-  return Math.random() > 0.5 ? 'player1' : 'player2';
 }

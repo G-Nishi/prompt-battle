@@ -3,24 +3,427 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
+  --text-primary: #171717;
+  --text-secondary: #4a4a4a;
+  --text-on-dark: #ffffff;
+  --text-on-light: #171717;
+  --input-bg: #ffffff;
+  --input-text: #171717;
+  --input-border: #d1d5db;
+  --card-bg: #ffffff;
+  --card-text: #171717;
+  --card-text-secondary: #4b5563;
+  --link-color: #6366f1;
+  --link-hover: #4f46e5;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #f8fafc;
+    --text-primary: #f8fafc;
+    --text-secondary: #e2e8f0;
+    --text-on-dark: #ffffff;
+    --text-on-light: #171717;
+    --input-bg: #1f2937;
+    --input-text: #f3f4f6;
+    --input-border: #374151;
+    --card-bg: #111827;
+    --card-text: #f3f4f6;
+    --card-text-secondary: #d1d5db;
+    --link-color: #818cf8;
+    --link-hover: #a5b4fc;
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+
+/* テキストカラーの強制適用 */
+h1, h2, h3, h4, h5, h6 {
+  color: inherit !important;
+  font-weight: 600 !important;
+}
+
+/* 暗い背景上のテキスト */
+.bg-gradient-to-r, 
+.bg-purple-600, 
+.bg-indigo-600, 
+.bg-blue-600, 
+.bg-purple-500, 
+.bg-indigo-500, 
+.bg-blue-500, 
+.bg-black,
+.from-purple-600,
+.to-indigo-600 {
+  color: white !important;
+}
+
+/* 暗い背景上のテキスト（子要素すべて） */
+.bg-gradient-to-r *, 
+.bg-purple-600 *, 
+.bg-indigo-600 *, 
+.bg-blue-600 *, 
+.bg-purple-500 *, 
+.bg-indigo-500 *, 
+.bg-blue-500 *, 
+.bg-black *,
+.from-purple-600 *,
+.to-indigo-600 * {
+  color: white !important;
+}
+
+/* 明るい背景上のテキスト */
+.bg-white, 
+.bg-gray-50, 
+.bg-gray-100, 
+.bg-gray-200 {
+  color: var(--text-on-light) !important;
+}
+
+/* 明るい背景上のテキスト（子要素すべて） */
+.bg-white *, 
+.bg-gray-50 *, 
+.bg-gray-100 *, 
+.bg-gray-200 * {
+  color: var(--text-on-light) !important;
+}
+
+/* 例外：子要素の中でもlink等、特定の色を持つ要素 */
+a {
+  color: var(--link-color) !important;
+  font-weight: 500 !important;
+}
+
+a:hover {
+  color: var(--link-hover) !important;
+}
+
+/* ヘッダー内のリンクテキスト強化 - すべて白色に統一 */
+header,
+header * {
+  color: white !important;
+}
+
+header a,
+header nav a,
+header li a,
+header .text-2xl,
+.bg-gradient-to-r a {
+  color: white !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+/* ヘッダー内のナビゲーションリンク */
+header nav ul li a {
+  color: white !important;
+  font-weight: 500 !important;
+  opacity: 0.9 !important;
+  transition: opacity 0.2s ease !important;
+}
+
+header nav ul li a:hover {
+  opacity: 1 !important;
+  text-decoration: underline !important;
+}
+
+/* ヘッダー内のアクションボタン（ログイン/新規登録） */
+header .bg-white {
+  background-color: white !important;
+  color: #4338ca !important; /* インディゴ700 */
+  font-weight: 600 !important;
+}
+
+header .bg-indigo-800 {
+  background-color: #3730a3 !important; /* インディゴ800 */
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+/* ナビゲーションリンクの強化 */
+.bg-gradient-to-r nav a,
+header nav a {
+  color: white !important;
+  text-decoration: none !important;
+}
+
+/* メインコンテンツのボタンスタイル */
+[href="/battles/new"],
+a.px-6.py-3.rounded-md {
+  display: inline-block !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  transition: all 0.2s ease !important;
+}
+
+/* 白背景ボタン */
+[href="/battles/new"] {
+  background-color: white !important;
+  color: #4338ca !important; /* インディゴ700 */
+  border: 2px solid #4338ca !important;
+}
+
+[href="/battles/new"]:hover {
+  background-color: #eef2ff !important; /* インディゴ50 */
+}
+
+/* ボタンスタイルの整合性確保 */
+a[href="/battles/new"],
+a.bg-indigo-700[href="/topics"],
+.bg-white.text-indigo-700,
+.bg-indigo-700.text-white {
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  border-radius: 0.375rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* 暗い背景上のリンク */
+.bg-gradient-to-r a, 
+.bg-purple-600 a, 
+.bg-indigo-600 a, 
+.bg-blue-600 a, 
+.bg-purple-500 a, 
+.bg-indigo-500 a, 
+.bg-blue-500 a, 
+.bg-black a,
+.from-purple-600 a,
+.to-indigo-600 a,
+header a {
+  color: white !important;
+  text-decoration: underline;
+}
+
+.bg-gradient-to-r a:hover, 
+.bg-purple-600 a:hover, 
+.bg-indigo-600 a:hover, 
+.bg-blue-600 a:hover, 
+.bg-purple-500 a:hover, 
+.bg-indigo-500 a:hover, 
+.bg-blue-500 a:hover, 
+.bg-black a:hover,
+.from-purple-600 a:hover,
+.to-indigo-600 a:hover,
+header a:hover {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 入力フォームのスタイル改善 */
+input, textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border: 1px solid var(--input-border) !important;
+  font-weight: 500 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-secondary) !important;
+  opacity: 0.8 !important;
+}
+
+/* プロンプト入力エリアの強調 */
+[role="textbox"], textarea {
+  color: var(--text-primary) !important;
+  background-color: var(--input-bg) !important;
+  border: 2px solid var(--input-border) !important;
+  font-weight: 500 !important;
+}
+
+/* 評価結果エリアの強調 */
+.whitespace-pre-line {
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+}
+
+/* すべてのテキストに最低限の読みやすさを保証 */
+p {
+  color: inherit !important;
+  font-weight: 500 !important;
+}
+
+/* 特定クラスの上書き */
+.text-gray-500, .text-gray-400, .text-gray-300 {
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+}
+
+.text-gray-600, .text-gray-700 {
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+}
+
+.text-sm, .text-xs {
+  font-weight: 600 !important;
+}
+
+/* カードのスタイルを強制 */
+.bg-white p, .bg-gray-50 p, .bg-gray-100 p, .bg-gray-200 p {
+  color: #171717 !important;
+  font-weight: 500 !important;
+}
+
+/* すべてのカード内テキストの強制 */
+.rounded-lg p, .shadow-md p, .p-6 p {
+  color: #171717 !important;
+  font-weight: 500 !important;
+}
+
+/* カード内テキストとアイコンのスタイル修正 */
+.bg-white.p-8.rounded-lg.shadow-md {
+  color: var(--card-text) !important;
+}
+
+.bg-white.p-8.rounded-lg.shadow-md h3 {
+  color: #1f2937 !important; /* gray-800 */
+  font-weight: 600 !important;
+}
+
+.bg-white.p-8.rounded-lg.shadow-md p {
+  color: #4b5563 !important; /* gray-600 */
+  font-weight: 500 !important;
+}
+
+.bg-indigo-100.text-indigo-600.p-4.rounded-full {
+  background-color: #e0e7ff !important; /* indigo-100 */
+  color: #4f46e5 !important; /* indigo-600 */
+}
+
+/* ボタンスタイルの整合性確保 */
+a[href="/battles/new"],
+a.bg-indigo-700[href="/topics"],
+.bg-white.text-indigo-700,
+.bg-indigo-700.text-white {
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  border-radius: 0.375rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* ヘッダーと暗い背景上のテキストを明確に - セレクタを限定して修正 */
+header nav a,
+header nav button,
+header .flex-col a:not(.bg-white),
+.bg-gradient-to-r h1,
+.bg-gradient-to-r > div > p {
+  color: white !important;
+}
+
+/* ボタンの文字色を明示的に指定 */
+.bg-white.text-indigo-700,
+a.bg-white,
+button.bg-white {
+  color: #4338ca !important; /* indigo-700 */
+  background-color: white !important;
+}
+
+a.bg-indigo-700,
+button.bg-indigo-700 {
+  color: white !important;
+  background-color: #4338ca !important; /* indigo-700 */
+}
+
+/* 白背景ボタン内のテキストは必ずインディゴに */
+a.bg-white.text-indigo-700,
+button.bg-white.text-indigo-700 {
+  color: #4338ca !important; /* indigo-700 */
+}
+
+/* インディゴ背景ボタン内のテキストは必ず白に */
+a.bg-indigo-700.text-white,
+button.bg-indigo-700.text-white {
+  color: white !important;
+}
+
+/* 例外：ヘッダー内の特定の要素 */
+header .bg-white {
+  background-color: white !important;
+}
+
+header .bg-white * {
+  color: #4338ca !important; /* indigo-700 */
+}
+
+/* メインボタンの統一感 */
+.px-8.py-4 {
+  padding: 1rem 2rem !important;
+  font-weight: 700 !important;
+}
+
+/* 使い方セクションのスタイル */
+.bg-gray-200.h-64.rounded-lg p {
+  color: #1f2937 !important; /* gray-800 */
+  font-weight: 500 !important;
+}
+
+/* 黒背景セクションのスタイル */
+.dark-section {
+  background-color: #111827 !important; /* gray-900 */
+  color: #f9fafb !important; /* gray-50 */
+}
+
+.dark-section h2,
+.dark-section h3 {
+  color: white !important;
+}
+
+.dark-section p {
+  color: #d1d5db !important; /* gray-300 */
+}
+
+.dark-section .bg-gray-800 {
+  background-color: #1f2937 !important; /* gray-800 */
+}
+
+/* ダークセクション内のイメージコンテナ */
+.dark-section .bg-gray-800 p {
+  color: #d1d5db !important; /* gray-300 */
+}
+
+/* ダークセクション内のリストとタイトル */
+.dark-section h2 {
+  color: white !important;
+}
+
+.dark-section h3 {
+  color: #f3f4f6 !important; /* gray-100 */
+}
+
+/* ダークセクション内のボタンとアクセント色 */
+.dark-section .bg-indigo-600 {
+  background-color: #4f46e5 !important; /* indigo-600 */
+  color: white !important;
+}
+
+/* エラーメッセージスタイルの修正 */
+.bg-red-50 {
+  background-color: #fef2f2 !important; /* red-50 */
+}
+
+.bg-red-50 .text-red-700,
+p.text-red-700,
+.text-red-700 {
+  color: #b91c1c !important; /* red-700 */
+  font-weight: 500 !important;
+}
+
+.border-red-500 {
+  border-color: #ef4444 !important; /* red-500 */
+}
+
+/* トピックリストの特定の修正 */
+[data-component-name="TopicsList"] p {
+  color: #b91c1c !important; /* red-700 */
 }

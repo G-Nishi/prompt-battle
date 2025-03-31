@@ -40,4 +40,33 @@ export interface Evaluation {
   evaluation_text: string;
   winner_id: string;
   created_at: string;
+  // 詳細評価情報（オプショナル）
+  detailed_evaluation?: {
+    player1: string;  // プレイヤー1の評価
+    player2: string;  // プレイヤー2の評価
+    summary: string;  // 総合評価
+  };
+}
+
+// ソロモードの対戦記録の型定義
+export interface SoloBattle {
+  id: string;
+  user_id: string;
+  topic_id: string;
+  prompt: string;
+  response: string;
+  evaluation: string;
+  score: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ソロモードの評価結果の型定義
+export interface SoloEvaluation {
+  relevance: number;
+  creativity: number;
+  clarity: number;
+  effectiveness: number;
+  total: number;
+  comment: string;
 }

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { topicAPI, battleAPI, userAPI } from '@/lib/api';
 import { Topic, User } from '@/types';
 
-export default function CreateBattle() {
+// メインコンテンツをSuspenseでラップするためのコンポーネント
+function BattleCreator() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [opponentEmail, setOpponentEmail] = useState<string>('');
@@ -299,5 +300,14 @@ export default function CreateBattle() {
         </div>
       </div>
     </div>
+  );
+}
+
+// メインページコンポーネント - Suspenseでラップ
+export default function CreateBattle() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">読み込み中...</div>}>
+      <BattleCreator />
+    </Suspense>
   );
 }

@@ -3,28 +3,33 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createBrowserSupabaseClient } from '@/lib/supabase';
 
 export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const [supabase] = useState(() => createBrowserSupabaseClient());
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    if (!email || !password || !username || !confirmPassword) {
-      setError('すべての項目を入力してください');
-      return;
-    }
     
     if (password !== confirmPassword) {
       setError('パスワードが一致しません');
+      return;
+    }
+    
+    if (password.length < 6) {
+      setError('パスワードは6文字以上で入力してください');
+      return;
+    }
+    
+    // メールアドレスのフォーマット検証
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('有効なメールアドレス形式を入力してください');
       return;
     }
     
@@ -32,42 +37,38 @@ export default function Register() {
       setLoading(true);
       setError(null);
       
-      // ユーザー登録
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username
-          }
-        }
+      // API経由で登録処理を実行
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          username,
+        }),
       });
       
-      if (authError) throw authError;
+      const data = await response.json();
       
-      if (authData.user) {
-        // ユーザープロファイルの作成
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: authData.user.id,
-              email: email,
-              username: username,
-              created_at: new Date().toISOString()
-            }
-          ]);
-        
-        if (profileError) throw profileError;
-        
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
+      if (!response.ok) {
+        throw new Error(data.error || 'アカウント登録に失敗しました');
       }
-    } catch (error: unknown) {
-      console.error('登録エラー:', error);
+      
+      console.log('登録成功:', data);
+      
+      // 成功メッセージを表示
+      alert('アカウント登録が完了しました！ログインページに移動します。');
+      
+      // ログインページへリダイレクト
+      setTimeout(() => {
+        router.push('/login');
+      }, 1000);
+    } catch (error) {
+      console.error('登録処理エラー:', error);
       const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
-      setError('アカウント登録に失敗しました。すでに登録されているメールアドレスの可能性があります。');
+      setError(`アカウント登録に失敗しました: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -88,7 +89,7 @@ export default function Register() {
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleRegister}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
               <p className="text-red-700">{error}</p>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [supabase] = useState(() => createBrowserSupabaseClient());
+  const { refreshSession } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,19 +27,41 @@ export default function Login() {
       setLoading(true);
       setError(null);
       
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('ログイン試行:', { email });
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('ログインエラー:', error);
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('メールアドレスまたはパスワードが正しくありません');
+        }
+        throw error;
+      }
       
-      router.push('/');
-      router.refresh();
-    } catch (error: unknown) {
-      console.error('ログインエラー:', error);
+      console.log('ログイン成功:', data.user?.email);
+      
+      // 認証状態を確実に更新
+      setTimeout(async () => {
+        await refreshSession();
+        console.log('セッション更新完了');
+        
+        // ホームページにリダイレクト
+        router.push('/');
+        
+        // クライアントサイドのナビゲーションを強制的に更新
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      }, 500);
+      
+    } catch (error) {
+      console.error('ログイン処理エラー:', error);
       const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
-      setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
+      setError(`ログインに失敗しました: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

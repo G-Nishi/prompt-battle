@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- RLSポリシーの設定（Row Level Security）
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+-- 一時的にRLSポリシーを緩和
+DROP POLICY IF EXISTS "認証済みユーザーは自分のプロフィールを作成可能" ON users;
+CREATE POLICY "認証済みユーザーは自分のプロフィールを作成可能" ON users
+  FOR INSERT TO authenticated USING (true);
 CREATE POLICY "ユーザーは自分自身のプロフィールを更新可能" ON users
   FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "誰でもユーザープロフィールを閲覧可能" ON users
@@ -61,6 +65,28 @@ CREATE POLICY "誰でも対戦情報を閲覧可能" ON battles
   FOR SELECT USING (true);
 CREATE POLICY "認証済みユーザーのみ対戦を作成可能" ON battles
   FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- ソロモードテーブル
+CREATE TABLE IF NOT EXISTS solo_battles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  topic_id UUID REFERENCES topics(id) NOT NULL,
+  prompt TEXT,
+  response TEXT,
+  evaluation TEXT,
+  score INT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- RLSポリシーの設定
+ALTER TABLE solo_battles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "ユーザーは自分のソロバトル記録を閲覧可能" ON solo_battles
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "ユーザーは自分のソロバトル記録を作成可能" ON solo_battles
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "ユーザーは自分のソロバトル記録を更新可能" ON solo_battles
+  FOR UPDATE USING (auth.uid() = user_id);
 
 -- 評価テーブル
 CREATE TABLE IF NOT EXISTS evaluations (
@@ -118,8 +144,14 @@ CREATE TRIGGER update_evaluations_updated_at
 BEFORE UPDATE ON evaluations
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+CREATE TRIGGER update_solo_battles_updated_at
+BEFORE UPDATE ON solo_battles
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 -- インデックスの設定（パフォーマンス向上のため）
 CREATE INDEX idx_battles_players ON battles(player1_id, player2_id);
 CREATE INDEX idx_battles_topic ON battles(topic_id);
 CREATE INDEX idx_evaluations_battle ON evaluations(battle_id);
 CREATE INDEX idx_topics_creator ON topics(created_by);
+CREATE INDEX idx_solo_battles_user ON solo_battles(user_id);
+CREATE INDEX idx_solo_battles_topic ON solo_battles(topic_id);

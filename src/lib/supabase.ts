@@ -1,15 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
-import { createBrowserClient } from '@supabase/ssr';
+import { createBrowserSupabaseClient, createServerSupabaseClient, createRouteHandlerSupabaseClient } from './auth';
 
-// Supabase client for browser
-export const createBrowserSupabaseClient = () => {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+// 認証関連の機能をエクスポート
+export { 
+  createBrowserSupabaseClient, 
+  createServerSupabaseClient,
+  createRouteHandlerSupabaseClient 
 };
 
-// Supabase client for server components
+// レガシーサーバーコンポーネント用のSupabaseクライアント
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
