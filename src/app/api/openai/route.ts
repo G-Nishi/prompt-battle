@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 // サーバーサイドのみで実行される
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_KEY || "デフォルトのキー（本番環境では置き換えてください）",
 });
 
 // AIレスポンス生成

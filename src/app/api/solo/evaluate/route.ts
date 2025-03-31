@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 
 // OpenAI設定
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_KEY || "デフォルトのキー（本番環境では置き換えてください）",
 });
 
 export async function POST(request: NextRequest) {
