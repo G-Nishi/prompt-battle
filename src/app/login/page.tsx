@@ -34,8 +34,9 @@ export default function Login() {
       
       router.push('/');
       router.refresh();
-    } catch (error: any) {
-      console.error('ログインエラー:', error.message);
+    } catch (error: unknown) {
+      console.error('ログインエラー:', error);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
       setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
     } finally {
       setLoading(false);

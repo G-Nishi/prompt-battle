@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { createBrowserSupabaseClient } from '@/lib/supabase';
 import { topicAPI, battleAPI, userAPI } from '@/lib/api';
 import { Topic, User } from '@/types';
 

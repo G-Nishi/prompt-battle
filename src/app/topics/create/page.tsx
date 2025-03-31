@@ -45,8 +45,9 @@ export default function CreateTopic() {
       // お題一覧ページにリダイレクト
       router.push('/topics');
       router.refresh();
-    } catch (error: any) {
-      console.error('お題作成エラー:', error.message);
+    } catch (error: unknown) {
+      console.error('お題作成エラー:', error);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
       setError('お題の作成に失敗しました。もう一度お試しください。');
     } finally {
       setLoading(false);

@@ -11,6 +11,14 @@ interface UserRanking extends User {
   win_rate: number;
 }
 
+interface Battle {
+  id: number;
+  player1_id: string;
+  player2_id: string;
+  winner_id: string;
+  status: string;
+}
+
 export default function RankingPage() {
   const [supabase] = useState(() => createBrowserSupabaseClient());
   const [rankings, setRankings] = useState<UserRanking[]>([]);
@@ -45,7 +53,7 @@ export default function RankingPage() {
         });
         
         // 対戦結果から勝敗を集計
-        battles.forEach((battle: any) => {
+        battles.forEach((battle: Battle) => {
           // プレイヤー1の統計
           if (userStats[battle.player1_id]) {
             userStats[battle.player1_id].total++;

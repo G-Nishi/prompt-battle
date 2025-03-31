@@ -60,11 +60,13 @@ export default function Register() {
         
         if (profileError) throw profileError;
         
-        router.push('/');
-        router.refresh();
+        setTimeout(() => {
+          router.push('/login');
+        }, 3000);
       }
-    } catch (error: any) {
-      console.error('登録エラー:', error.message);
+    } catch (error: unknown) {
+      console.error('登録エラー:', error);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
       setError('アカウント登録に失敗しました。すでに登録されているメールアドレスの可能性があります。');
     } finally {
       setLoading(false);
