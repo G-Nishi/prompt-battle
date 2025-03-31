@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       
       // 画像URLをユーザープロファイルに保存
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from('users')
         .upsert({
           id: userId,
           username: username,
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       // アバター生成に失敗しても、基本的なプロファイルは作成する
       try {
         const { error: profileError } = await supabase
-          .from('profiles')
+          .from('users')
           .upsert({
             id: userId,
             username: username,
@@ -180,7 +180,7 @@ async function createProfileWithoutAvatar(
   username: string
 ) {
   const { error } = await supabase
-    .from('profiles')
+    .from('users')
     .upsert({
       id: userId,
       username: username,

@@ -21,7 +21,7 @@ export const userAPI = {
       
       // プロフィール情報を取得
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
         .eq('id', user.id)
         .single();
