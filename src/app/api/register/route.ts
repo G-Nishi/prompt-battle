@@ -49,6 +49,23 @@ export async function POST(request: NextRequest) {
 
     // AIによるアバター画像生成のプロンプト
     try {
+      // OpenAI APIが利用可能かどうかをチェック
+      if (!process.env.OPENAI_KEY) {
+        console.warn('OpenAI APIキーが設定されていないため、デフォルトアバターを使用します');
+        // アバターなしで基本的なプロファイルを作成
+        await createProfileWithoutAvatar(supabase, userId, username);
+        
+        return NextResponse.json({
+          success: true,
+          message: 'ユーザー登録が完了しました（デフォルトアバター）',
+          user: {
+            id: userId,
+            email: email,
+            username: username
+          }
+        });
+      }
+      
       const imagePrompt = `A creative, colorful profile avatar for a user named ${username}. Digital art style, vibrant colors, suitable as a profile picture, centered composition, white background.`;
       
       // OpenAIを使用して画像を生成
@@ -63,7 +80,19 @@ export async function POST(request: NextRequest) {
       const imageUrl = response.data[0]?.url;
       
       if (!imageUrl) {
-        throw new Error('画像生成に失敗しました');
+        console.warn('画像URLが取得できなかったため、デフォルトアバターを使用します');
+        // アバターなしで基本的なプロファイルを作成
+        await createProfileWithoutAvatar(supabase, userId, username);
+        
+        return NextResponse.json({
+          success: true,
+          message: 'ユーザー登録が完了しました（デフォルトアバター）',
+          user: {
+            id: userId,
+            email: email,
+            username: username
+          }
+        });
       }
       
       // 画像URLをユーザープロファイルに保存
@@ -97,34 +126,42 @@ export async function POST(request: NextRequest) {
       console.error('アバター生成エラー:', error);
       
       // アバター生成に失敗しても、基本的なプロファイルは作成する
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          username: username,
-          created_at: new Date().toISOString()
-        });
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            username: username,
+            created_at: new Date().toISOString()
+          });
+          
+        if (profileError) {
+          console.error('プロファイル作成エラー:', profileError);
+          return NextResponse.json(
+            { error: `プロファイル作成に失敗しました: ${profileError.message}` },
+            { status: 500 }
+          );
+        }
         
-      if (profileError) {
-        console.error('プロファイル作成エラー:', profileError);
+        const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+        
+        return NextResponse.json({
+          success: true,
+          message: 'ユーザー登録が完了しました（アバター生成に失敗）',
+          user: {
+            id: userId,
+            email: email,
+            username: username
+          },
+          warning: `アバター画像の生成に失敗しました: ${errorMessage}`
+        });
+      } catch (profileError) {
+        console.error('プロファイル作成時の追加エラー:', profileError);
         return NextResponse.json(
-          { error: `プロファイル作成に失敗しました: ${profileError.message}` },
+          { error: 'ユーザー登録に失敗しました。再度お試しください。' },
           { status: 500 }
         );
       }
-      
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
-      
-      return NextResponse.json({
-        success: true,
-        message: 'ユーザー登録が完了しました（アバター生成に失敗）',
-        user: {
-          id: userId,
-          email: email,
-          username: username
-        },
-        warning: `アバター画像の生成に失敗しました: ${errorMessage}`
-      });
     }
   } catch (error: unknown) {
     console.error('登録エラー:', error);
@@ -134,4 +171,25 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// プロファイル作成ヘルパー関数
+async function createProfileWithoutAvatar(
+  supabase: ReturnType<typeof createRouteHandlerSupabaseClient>,
+  userId: string,
+  username: string
+) {
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userId,
+      username: username,
+      created_at: new Date().toISOString()
+    });
+    
+  if (error) {
+    throw error;
+  }
+  
+  return true;
 }
