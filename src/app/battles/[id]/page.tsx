@@ -26,7 +26,6 @@ export default function BattleDetail({ params }: BattleDetailProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   // ユーザーが対戦の参加者かどうか
   const isParticipant = currentUser && battle && 
@@ -94,7 +93,7 @@ export default function BattleDetail({ params }: BattleDetailProps) {
         schema: 'public',
         table: 'battles',
         filter: `id=eq.${id}`
-      }, async (payload) => {
+      }, async () => {
         // 対戦情報を更新
         const { battle, evaluation } = await battleAPI.getBattleDetail(id);
         setBattle(battle);

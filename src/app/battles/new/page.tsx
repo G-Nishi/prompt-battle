@@ -8,7 +8,6 @@ import { topicAPI, battleAPI, userAPI } from '@/lib/api';
 import { Topic, User } from '@/types';
 
 export default function CreateBattle() {
-  const [supabase] = useState(() => createBrowserSupabaseClient());
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [opponentEmail, setOpponentEmail] = useState<string>('');

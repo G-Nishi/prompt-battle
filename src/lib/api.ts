@@ -217,11 +217,15 @@ export const battleAPI = {
     if (battleError) throw battleError;
 
     // 評価情報も取得
-    const { data: evaluation, error: evalError } = await supabase
+    const { data: evaluation, error } = await supabase
       .from('evaluations')
       .select('*')
       .eq('battle_id', battleId)
       .single();
+      
+    if (error && error.code !== 'PGRST116') { // PGRST116は「結果なし」のエラーコード
+      console.error('評価情報取得エラー:', error);
+    }
 
     return {
       battle: battle as Battle,

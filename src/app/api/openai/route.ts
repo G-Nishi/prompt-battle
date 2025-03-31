@@ -37,10 +37,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       text: response.choices[0].message.content
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('OpenAI API error:', error);
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー';
     return NextResponse.json(
-      { error: `AIの応答生成中にエラーが発生しました: ${error.message}` },
+      { error: `AIの応答生成中にエラーが発生しました: ${errorMessage}` },
       { status: 500 }
     );
   }
@@ -81,10 +82,11 @@ export async function PUT(request: NextRequest) {
       evaluation: evaluationText,
       winnerId: winner
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('OpenAI API評価エラー:', error);
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー';
     return NextResponse.json(
-      { error: `評価中にエラーが発生しました: ${error.message}` },
+      { error: `評価中にエラーが発生しました: ${errorMessage}` },
       { status: 500 }
     );
   }
