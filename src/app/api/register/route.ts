@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
         .upsert({
           id: userId,
           username: username,
+          email: email,
           avatar_url: imageUrl,
           created_at: new Date().toISOString()
         });
