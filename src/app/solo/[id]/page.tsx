@@ -166,10 +166,19 @@ export default function SoloBattlePage({ params }: Props) {
         })
       });
       
-      const data = await response.json();
+      // レスポンスがJSONでない場合を処理
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('JSONパースエラー:', parseError);
+        // テキストとして読み込んで詳細を確認
+        const textResponse = await response.text();
+        throw new Error(`レスポンスがJSON形式ではありません: ${textResponse.substring(0, 100)}...`);
+      }
       
       if (!response.ok) {
-        throw new Error(data.error || 'プロンプト評価に失敗しました');
+        throw new Error(data.error || `プロンプト評価に失敗しました (ステータス: ${response.status})`);
       }
       
       setResponse(data.response);
