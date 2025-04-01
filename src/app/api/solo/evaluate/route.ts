@@ -4,69 +4,78 @@ import OpenAI from 'openai';
 
 // OpenAI設定
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_API_KEY || "",
 });
+
+// APIキーチェック
+function checkApiKey() {
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('OpenAI APIキーが設定されていません');
+    return false;
+  }
+  return true;
+}
 
 export async function POST(request: NextRequest) {
   try {
     // APIキーチェック
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('OpenAI APIキーが設定されていません');
-      return NextResponse.json({ error: 'APIキーが設定されていません。環境変数を確認してください。' }, { status: 500 });
+    if (!checkApiKey()) {
+      return NextResponse.json({ 
+        error: 'APIキーが設定されていません。環境変数を確認してください。' 
+      }, { status: 500 });
     }
-    
+
+    // リクエストから必要なデータを取得
     const { prompt, topicId, topicTitle, topicDescription } = await request.json();
     
-    // 入力検証
     if (!prompt || !topicId || !topicTitle) {
-      return NextResponse.json({ error: '必要なパラメータが不足しています' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'プロンプト、お題ID、お題タイトルが必要です' },
+        { status: 400 }
+      );
     }
     
-    // 認証確認
+    // Supabaseクライアント
     const supabase = createRouteHandlerSupabaseClient(request);
-    const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    // ユーザー認証情報を取得
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('認証エラー:', authError);
+      return NextResponse.json(
+        { error: 'ユーザー認証に失敗しました' },
+        { status: 401 }
+      );
     }
     
-    // AIによるプロンプト応答生成
-    let response: string;
+    // AIレスポンス生成
+    let response;
     try {
       const responseCompletion = await openai.chat.completions.create({
         model: "gpt-4-turbo-preview",
         messages: [
           {
             role: "system",
-            content: `あなたは高度な文章生成AIです。  
-与えられた「お題」と「ユーザーのプロンプト」に従い、適切な回答を生成してください。  
+            content: `あなたは高度な文章生成AIです。
+与えられた「お題」と「ユーザーのプロンプト」に従い、適切な回答を生成してください。
 
-【入力情報】  
-- **お題**: AIが出題したお題  
-- **プロンプト**: ユーザーが考えた指示  
+【入力情報】
+- **お題**: AIが出題したお題
+- **プロンプト**: ユーザーが考えた指示
 
-【回答のルール】  
-1. **プロンプトに忠実に従うこと**  
-   - 文体、長さ、形式などの指示を正確に守る。  
-2. **一貫性と論理性を保つこと**  
-   - 物語の場合、ストーリーの流れを自然にする。  
-   - 説明の場合、明確で分かりやすい文章にする。  
-3. **創造性を発揮すること**  
-   - 指示の範囲内で、可能な限り独自性を持たせる。  
-4. **簡潔で明瞭な文章を作ること**  
-   - 余計な冗長表現を避け、分かりやすくする。  
+【回答のルール】
+1. **プロンプトに忠実に従うこと**
+   - 文体、長さ、形式などの指示を正確に守る。
+2. **一貫性と論理性を保つこと**
+   - 物語の場合、ストーリーの流れを自然にする。
+   - 説明の場合、明確で分かりやすい文章にする。
+3. **創造性を発揮すること**
+   - 指示の範囲内で、可能な限り独自性を持たせる。
+4. **簡潔で明瞭な文章を作ること**
+   - 余計な冗長表現を避け、分かりやすくする。
 
-【出力フォーマット】  
-AIの回答のみを出力してください。  
-
-【入力例】  
-お題: 「ゴシックホラー風に学校の日常を描写してください」  
-プロンプト: 「19世紀ヨーロッパのゴシックホラー小説風に、登場人物が謎の教師の秘密を探る物語を100文字以内で書いてください」  
-
-【出力例】  
-霧深い学び舎に響く謎の足音。黒衣の教師は幽霊か、それとも禁じられた知識を守る者なのか？
-
-このルールに従い、適切な回答を生成してください。`
+【出力フォーマット】
+AIの回答のみを出力してください。`
           },
           {
             role: "user",
@@ -75,6 +84,9 @@ AIの回答のみを出力してください。
         ],
         temperature: 0.7,
         max_tokens: 1000
+      }).catch(error => {
+        console.error('OpenAI API呼び出しエラー:', error);
+        throw new Error(`AIレスポンスの生成に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
       });
       
       response = responseCompletion.choices[0].message.content || '';
@@ -147,6 +159,9 @@ AIの回答のみを出力してください。
         ],
         temperature: 0.5,
         max_tokens: 1000
+      }).catch(error => {
+        console.error('OpenAI評価API呼び出しエラー:', error);
+        throw new Error(`評価の生成に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
       });
       
       // 評価結果の解析
@@ -170,7 +185,10 @@ AIの回答のみを出力してください。
       } catch (parseError) {
         console.error('JSON解析エラー:', parseError);
         console.error('解析しようとした文字列:', cleanedEvaluation);
-        throw new Error(`評価JSONの解析に失敗しました: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        return NextResponse.json({ 
+          error: `評価JSONの解析に失敗しました: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+          rawText: cleanedEvaluation
+        }, { status: 500 });
       }
     
     } catch (error: unknown) {
@@ -182,7 +200,7 @@ AIの回答のみを出力してください。
       );
     }
     
-    // ソロバトル記録をデータベースに保存
+    // スコア計算と結果の保存
     try {
       console.log('評価結果:', evaluation); // デバッグ用
 

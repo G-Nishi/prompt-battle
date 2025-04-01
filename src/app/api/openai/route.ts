@@ -3,15 +3,23 @@ import OpenAI from 'openai';
 
 // サーバーサイドのみで実行される
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_API_KEY || "",
 });
+
+// APIキーチェック
+function checkApiKey() {
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('OpenAI APIキーが設定されていません');
+    return false;
+  }
+  return true;
+}
 
 // AIレスポンス生成
 export async function POST(request: NextRequest) {
   try {
     // APIキーチェック
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('OpenAI APIキーが設定されていません');
+    if (!checkApiKey()) {
       return NextResponse.json({ error: 'APIキーが設定されていません。環境変数を確認してください。' }, { status: 500 });
     }
 
@@ -24,12 +32,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview', // 最新のモデル指定に更新
-      messages: [
-        {
-          role: 'system',
-          content: `あなたは高度な文章生成AIです。  
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview', // 最新のモデル指定に更新
+        messages: [
+          {
+            role: 'system',
+            content: `あなたは高度な文章生成AIです。  
 与えられた「お題」と「ユーザーのプロンプト」に従い、適切な回答を生成してください。  
 
 【入力情報】  
@@ -49,32 +58,44 @@ export async function POST(request: NextRequest) {
 
 【出力フォーマット】  
 AIの回答のみを出力してください。`
-        },
-        {
-          role: 'user',
-          content: `お題: ${topic}\n\nプロンプト: ${prompt}`
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 500,
-    });
+          },
+          {
+            role: 'user',
+            content: `お題: ${topic}\n\nプロンプト: ${prompt}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
 
-    return NextResponse.json({
-      text: response.choices[0].message.content
-    });
-  } catch (error: unknown) {
-    console.error('OpenAI API error:', error);
-    const errorMessage = error instanceof Error ? error.message : '不明なエラー';
-    return NextResponse.json(
-      { error: `AIの応答生成中にエラーが発生しました: ${errorMessage}` },
-      { status: 500 }
-    );
+      return NextResponse.json({ 
+        response: response.choices[0].message.content,
+        success: true 
+      });
+    } catch (openaiError) {
+      console.error('OpenAI API呼び出しエラー:', openaiError);
+      return NextResponse.json({ 
+        error: `AIレスポンスの生成に失敗しました: ${openaiError instanceof Error ? openaiError.message : '不明なエラー'}`,
+        success: false 
+      }, { status: 500 });
+    }
+  } catch (error) {
+    console.error('AIレスポンス生成エラー:', error);
+    return NextResponse.json({ 
+      error: `リクエスト処理に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+      success: false 
+    }, { status: 500 });
   }
 }
 
 // 評価API
 export async function PUT(request: NextRequest) {
   try {
+    // APIキーチェック
+    if (!checkApiKey()) {
+      return NextResponse.json({ error: 'APIキーが設定されていません。環境変数を確認してください。' }, { status: 500 });
+    }
+
     const { response1, response2, topic } = await request.json();
 
     if (!response1 || !response2 || !topic) {
@@ -84,12 +105,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const evaluationResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview', // 最新のモデル指定に更新
-      messages: [
-        {
-          role: 'system',
-          content: `あなたはプロンプトの品質を評価する専門家です。以下の5つの基準に基づいて、AIに対するプロンプトの評価を行ってください。
+    try {
+      const evaluationResponse = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview', // 最新のモデル指定に更新
+        messages: [
+          {
+            role: 'system',
+            content: `あなたはプロンプトの品質を評価する専門家です。以下の5つの基準に基づいて、AIに対するプロンプトの評価を行ってください。
 
 1. **精度（Relevance）**: プロンプトが適切で、AIが正しく理解しやすいか？  
 2. **出力の質（Quality）**: AIの回答が論理的で、まとまりがあり、適切な内容になっているか？  
@@ -126,76 +148,83 @@ export async function PUT(request: NextRequest) {
   "模範プロンプト例": "このお題に対する理想的なプロンプトの例（200-300字程度）",
   "悪いプロンプト例": "このお題に対する改善が必要なプロンプトの例（100-200字程度）"
 }`
-        },
-        {
-          role: 'user',
-          content: `お題: ${topic}\n\nプロンプト1の回答: ${response1}\n\nプロンプト2の回答: ${response2}`
+          },
+          {
+            role: 'user',
+            content: `お題: ${topic}\n\nプロンプト1の回答: ${response1}\n\nプロンプト2の回答: ${response2}`
+          }
+        ],
+        temperature: 0.5,
+        max_tokens: 1000,
+      });
+
+      const evaluationText = evaluationResponse.choices[0].message.content || '';
+      let evaluationJson;
+      
+      try {
+        evaluationJson = JSON.parse(evaluationText);
+      } catch (parseError) {
+        console.error('評価JSONの解析に失敗:', evaluationText);
+        return NextResponse.json({ 
+          error: `評価結果の形式が不正です: ${parseError instanceof Error ? parseError.message : '不明なエラー'}`,
+          rawText: evaluationText 
+        }, { status: 500 });
+      }
+      
+      // 各プレイヤーの総合評価を計算（各項目の合計値）
+      const player1TotalScore = 
+        (evaluationJson.プレイヤー1.精度 || 0) +
+        (evaluationJson.プレイヤー1.出力の質 || 0) +
+        (evaluationJson.プレイヤー1.独自性 || 0) +
+        (evaluationJson.プレイヤー1.明確さ || 0) +
+        (evaluationJson.プレイヤー1.制約遵守 || 0);
+      
+      const player2TotalScore = 
+        (evaluationJson.プレイヤー2.精度 || 0) +
+        (evaluationJson.プレイヤー2.出力の質 || 0) +
+        (evaluationJson.プレイヤー2.独自性 || 0) +
+        (evaluationJson.プレイヤー2.明確さ || 0) +
+        (evaluationJson.プレイヤー2.制約遵守 || 0);
+      
+      // デバッグログ
+      console.log('評価JSON:', JSON.stringify(evaluationJson, null, 2));
+      console.log('プレイヤー1スコア:', evaluationJson.プレイヤー1);
+      console.log('プレイヤー1合計:', player1TotalScore);
+      console.log('プレイヤー2スコア:', evaluationJson.プレイヤー2);
+      console.log('プレイヤー2合計:', player2TotalScore);
+      
+      // 総合評価をレスポンスJSONに追加
+      evaluationJson.プレイヤー1.総合評価 = player1TotalScore;
+      evaluationJson.プレイヤー2.総合評価 = player2TotalScore;
+      
+      // AIが提供したwinnerId、またはスコアから判断
+      const winner = evaluationJson.winnerId || 
+        (player1TotalScore > player2TotalScore ? 'player1' : 
+         player2TotalScore > player1TotalScore ? 'player2' : 'tie');
+      
+      const evaluation = evaluationJson.比較評価 || evaluationJson.evaluation;
+      
+      return NextResponse.json({
+        evaluationResult: {
+          winner: winner,
+          evaluation: evaluation,
+          player1Score: player1TotalScore,
+          player2Score: player2TotalScore,
+          detailed: evaluationJson
         }
-      ],
-      temperature: 0.5,
-      max_tokens: 1000,
-    });
-
-    const evaluationText = evaluationResponse.choices[0].message.content || '';
-    let evaluationJson;
-    
-    try {
-      evaluationJson = JSON.parse(evaluationText);
-    } catch (error) {
-      console.error('評価JSONの解析に失敗:', evaluationText);
-      throw new Error('評価結果の形式が不正です');
+      });
+    } catch (openaiError) {
+      console.error('OpenAI評価API呼び出しエラー:', openaiError);
+      return NextResponse.json({ 
+        error: `評価の生成に失敗しました: ${openaiError instanceof Error ? openaiError.message : '不明なエラー'}`,
+        success: false 
+      }, { status: 500 });
     }
-    
-    // 各プレイヤーの総合評価を計算（各項目の合計値）
-    const player1TotalScore = 
-      (evaluationJson.プレイヤー1.精度 || 0) +
-      (evaluationJson.プレイヤー1.出力の質 || 0) +
-      (evaluationJson.プレイヤー1.独自性 || 0) +
-      (evaluationJson.プレイヤー1.明確さ || 0) +
-      (evaluationJson.プレイヤー1.制約遵守 || 0);
-    
-    const player2TotalScore = 
-      (evaluationJson.プレイヤー2.精度 || 0) +
-      (evaluationJson.プレイヤー2.出力の質 || 0) +
-      (evaluationJson.プレイヤー2.独自性 || 0) +
-      (evaluationJson.プレイヤー2.明確さ || 0) +
-      (evaluationJson.プレイヤー2.制約遵守 || 0);
-    
-    // デバッグログ
-    console.log('評価JSON:', JSON.stringify(evaluationJson, null, 2));
-    console.log('プレイヤー1スコア:', evaluationJson.プレイヤー1);
-    console.log('プレイヤー1合計:', player1TotalScore);
-    console.log('プレイヤー2スコア:', evaluationJson.プレイヤー2);
-    console.log('プレイヤー2合計:', player2TotalScore);
-    
-    // 総合評価をレスポンスJSONに追加
-    evaluationJson.プレイヤー1.総合評価 = player1TotalScore;
-    evaluationJson.プレイヤー2.総合評価 = player2TotalScore;
-    
-    // AIが提供したwinnerId、またはスコアから判断
-    const winner = evaluationJson.winnerId || 
-      (player1TotalScore > player2TotalScore ? 'player1' : 
-       player2TotalScore > player1TotalScore ? 'player2' : 'tie');
-    
-    const evaluation = evaluationJson.比較評価 || evaluationJson.evaluation;
-
-    return NextResponse.json({
-      evaluation: evaluation,
-      detailedEvaluation: {
-        player1: evaluationJson.プレイヤー1,
-        player2: evaluationJson.プレイヤー2,
-        summary: evaluationJson.比較評価,
-        goodExample: evaluationJson.模範プロンプト例,
-        badExample: evaluationJson.悪いプロンプト例
-      },
-      winnerId: winner
-    });
-  } catch (error: unknown) {
-    console.error('OpenAI API評価エラー:', error);
-    const errorMessage = error instanceof Error ? error.message : '不明なエラー';
-    return NextResponse.json(
-      { error: `評価中にエラーが発生しました: ${errorMessage}` },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error('評価処理エラー:', error);
+    return NextResponse.json({ 
+      error: `評価リクエスト処理に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+      success: false 
+    }, { status: 500 });
   }
 }
