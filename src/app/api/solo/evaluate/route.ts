@@ -2,6 +2,9 @@ import { NextResponse, NextRequest } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/auth';
 import OpenAI from 'openai';
 
+// Edge Runtimeを指定して、タイムアウト制限を緩和
+export const runtime = 'edge';
+
 // OpenAI設定
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
@@ -110,46 +113,36 @@ AIの回答のみを出力してください。`
       "明確さ": number;
       "制約遵守": number;
       "コメント": string;
-      "模範プロンプト例": string;
-      "悪いプロンプト例": string;
     };
     try {
       const evaluationCompletion = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
             content: `あなたはプロンプトの品質を評価する専門家です。
-ユーザーがAIに対して「プロンプトの精度を競うゲーム」のために作成したプロンプトを評価してください。  
+ユーザーがAIに対して作成したプロンプトを効率的に評価してください。
 以下の情報が与えられます。  
 
 - **お題**: AIが出題したお題  
 - **プロンプト**: ユーザーが考えたプロンプト  
 - **AIの回答**: ユーザーのプロンプトに基づいてAIが生成した回答  
 
-【評価基準】  
-1. **精度（Relevance）**: プロンプトが適切で、AIが正しく理解しやすいか？  
-2. **出力の質（Quality）**: AIの回答が論理的で、まとまりがあり、適切な内容になっているか？  
-3. **独自性（Creativity）**: 他の人と差別化できる工夫がされているか？  
-4. **明確さ（Clarity）**: 不要な情報がなく、簡潔でわかりやすいプロンプトになっているか？  
-5. **制約遵守（Adherence）**: お題の条件（例: 文体、構成など）を適切に指示できているか？  
+【評価基準（各0-20点）】  
+- **精度**: プロンプトが適切で、AIが正しく理解しやすいか
+- **出力の質**: AIの回答が論理的で内容が適切か
+- **独自性**: 工夫された独創的なプロンプトか
+- **明確さ**: 簡潔でわかりやすいプロンプトか
+- **制約遵守**: お題の条件を適切に指示できているか
 
-【出力フォーマット】  
-以下のJSON形式で出力してください。
-各評価項目は0-20の範囲で評価してください。
-総合評価は含めないでください。アプリ側で計算します。
-
-また、このお題に対する「模範的なプロンプト例」と「改善が必要なプロンプト例」を提示してください。
-
+【出力形式】以下のシンプルなJSON形式で出力してください。コメントは簡潔に。
 {
   "精度": <0-20の数値>,
   "出力の質": <0-20の数値>,
   "独自性": <0-20の数値>,
   "明確さ": <0-20の数値>,
   "制約遵守": <0-20の数値>,
-  "コメント": "<プロンプトの良かった点・改善点>",
-  "模範プロンプト例": "このお題に対する理想的なプロンプトの例（200-300字程度）",
-  "悪いプロンプト例": "このお題に対する改善が必要なプロンプトの例（100-200字程度）"
+  "コメント": "<短い評価コメント（50字以内）>"
 }`
           },
           {
@@ -157,8 +150,8 @@ AIの回答のみを出力してください。`
             content: `お題: ${topicTitle}\n${topicDescription || ''}\n\nプロンプト: ${prompt}\n\nAIの応答: ${response}`
           }
         ],
-        temperature: 0.5,
-        max_tokens: 1000
+        temperature: 0.3,
+        max_tokens: 300
       }).catch(error => {
         console.error('OpenAI評価API呼び出しエラー:', error);
         throw new Error(`評価の生成に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
