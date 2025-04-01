@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: "system",
-            content: `あなたは文章生成AIです。お題とプロンプトに従って回答を生成してください。
+            content: `あなたは文章生成AIです。ユーザーからのプロンプト（指示）に従って回答を生成してください。
 以下のルールを守ってください：
 1. プロンプトの指示に忠実に従う
 2. 回答は300単語以内で簡潔にまとめる
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           },
           {
             role: "user",
-            content: `お題: ${topicTitle}\n${topicDescription || ''}\n\nプロンプト: ${prompt}`
+            content: `${prompt}`
           }
         ],
         temperature: 0.5,
