@@ -168,13 +168,21 @@ export default function SoloBattlePage({ params }: Props) {
       
       // レスポンスがJSONでない場合を処理
       let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error('JSONパースエラー:', parseError);
-        // テキストとして読み込んで詳細を確認
-        const textResponse = await response.text();
-        throw new Error(`レスポンスがJSON形式ではありません: ${textResponse.substring(0, 100)}...`);
+      let textContent;
+      
+      // 応答の形式をチェック
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('JSONパースエラー:', parseError);
+          throw new Error(`レスポンスの解析に失敗しました: JSONの形式が不正です`);
+        }
+      } else {
+        // JSONでない場合はテキストとして読み取る
+        textContent = await response.text();
+        throw new Error(`サーバーからの応答がJSON形式ではありません: ${textContent.substring(0, 100)}...`);
       }
       
       if (!response.ok) {
