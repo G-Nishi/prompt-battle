@@ -367,7 +367,7 @@ export default function SoloBattlePage({ params }: Props) {
                 </div>
               </div>
               
-              <div className="mt-8">
+              <div className="mb-6">
                 <h3 className="font-semibold text-lg mb-2 text-gray-700">評価コメント:</h3>
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <p className="whitespace-pre-line text-gray-900 font-medium">{evaluation['コメント']}</p>
