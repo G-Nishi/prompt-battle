@@ -4,24 +4,38 @@ import OpenAI from 'openai';
 
 // OpenAI設定
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_API_KEY || "",
 });
+
+// APIキーチェック
+function checkApiKey() {
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('OpenAI APIキーが設定されていません');
+    return false;
+  }
+  return true;
+}
 
 export async function POST(request: NextRequest) {
   try {
     // APIキーチェック
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('OpenAI APIキーが設定されていません');
-      return NextResponse.json({ error: 'APIキーが設定されていません。環境変数を確認してください。' }, { status: 500 });
+    if (!checkApiKey()) {
+      return NextResponse.json({ 
+        error: 'APIキーが設定されていません。環境変数を確認してください。' 
+      }, { status: 500 });
     }
 
     // 認証確認 - Next.js App Router方式
     const supabase = createRouteHandlerSupabaseClient(request);
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    if (authError || !user) {
+      console.error('認証エラー:', authError);
+      return NextResponse.json(
+        { error: 'ユーザー認証に失敗しました' },
+        { status: 401 }
+      );
     }
     
     // AIによるお題生成
@@ -65,6 +79,9 @@ export async function POST(request: NextRequest) {
         ],
         temperature: 0.7,
         max_tokens: 300
+      }).catch(error => {
+        console.error('OpenAI API呼び出しエラー:', error);
+        throw new Error(`お題生成に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
       });
       
       // レスポンスの解析
@@ -88,31 +105,28 @@ export async function POST(request: NextRequest) {
       } catch (parseError) {
         console.error('JSON解析エラー:', parseError);
         console.error('解析しようとした文字列:', cleanedResponse);
-        throw new Error(`JSONの解析に失敗しました: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        return NextResponse.json({ 
+          error: `JSONの解析に失敗しました: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+          rawText: cleanedResponse
+        }, { status: 500 });
       }
       
       // 基本的な検証
       if (!topicData.title || !topicData.description) {
-        throw new Error('生成されたお題が不完全です');
+        return NextResponse.json({ 
+          error: '生成されたお題が不完全です', 
+          rawData: topicData 
+        }, { status: 500 });
       }
     } catch (error: unknown) {
       console.error('お題生成エラー詳細:', error);
       
-      // OpenAI APIのエラー型の詳細な情報を取得
+      // エラーメッセージの抽出
       let errorMessage = '不明なエラー';
       if (error instanceof Error) {
         errorMessage = error.message;
         console.error('エラー種別:', error.name);
         console.error('スタックトレース:', error.stack);
-        
-        // OpenAIのAPIエラーオブジェクトの場合
-        const apiError = error as any;
-        if (apiError.status) {
-          console.error('APIステータス:', apiError.status);
-        }
-        if (apiError.headers) {
-          console.error('APIヘッダー:', apiError.headers);
-        }
       }
       
       return NextResponse.json(
@@ -141,7 +155,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `お題の保存に失敗しました: ${error.message}` }, { status: 500 });
       }
       
-      return NextResponse.json({ success: true, topic });
+      return NextResponse.json({
+        success: true,
+        topic
+      });
     } catch (error: unknown) {
       console.error('データベース保存エラー:', error);
       const errorMessage = error instanceof Error ? error.message : '不明なエラー';
@@ -150,12 +167,11 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-    
   } catch (error: unknown) {
-    console.error('お題生成処理エラー:', error);
+    console.error('全体エラー:', error);
     const errorMessage = error instanceof Error ? error.message : '不明なエラー';
     return NextResponse.json(
-      { error: `お題の生成処理に失敗しました: ${errorMessage}` },
+      { error: `お題生成処理に失敗しました: ${errorMessage}` },
       { status: 500 }
     );
   }
