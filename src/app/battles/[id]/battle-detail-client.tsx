@@ -256,6 +256,25 @@ export default function BattleDetailClient({ id }: BattleDetailClientProps) {
                 <h3 className="font-semibold mb-2 text-gray-800">総合評価:</h3>
                 <p className="text-gray-700">{evaluation.detailed_evaluation.summary}</p>
               </div>
+
+              {/* 模範プロンプト例と悪いプロンプト例のセクション */}
+              {(evaluation.detailed_evaluation.模範プロンプト例 || evaluation.detailed_evaluation.悪いプロンプト例) && (
+                <div className="mt-4 space-y-4">
+                  {evaluation.detailed_evaluation.模範プロンプト例 && (
+                    <div className="bg-green-50 p-4 rounded-md border border-green-200">
+                      <h3 className="font-semibold mb-2 text-green-800">模範プロンプト例:</h3>
+                      <p className="text-gray-700 whitespace-pre-line">{evaluation.detailed_evaluation.模範プロンプト例}</p>
+                    </div>
+                  )}
+                  
+                  {evaluation.detailed_evaluation.悪いプロンプト例 && (
+                    <div className="bg-red-50 p-4 rounded-md border border-red-200">
+                      <h3 className="font-semibold mb-2 text-red-800">改善を要するプロンプト例:</h3>
+                      <p className="text-gray-700 whitespace-pre-line">{evaluation.detailed_evaluation.悪いプロンプト例}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="whitespace-pre-wrap">

@@ -45,6 +45,8 @@ export interface Evaluation {
     player1: string;  // プレイヤー1の評価
     player2: string;  // プレイヤー2の評価
     summary: string;  // 総合評価
+    模範プロンプト例?: string; // 模範的なプロンプトの例
+    悪いプロンプト例?: string; // 改善が必要なプロンプトの例
   };
 }
 

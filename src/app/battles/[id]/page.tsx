@@ -14,8 +14,8 @@ type Props = {
 
 // メタデータ生成
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  // paramsからIDを取得
-  const id = params.id;
+  // Next.js 15.xでのサーバーコンポーネントでのパラメータ処理
+  const id = params?.id;
   
   return {
     title: `バトル詳細 #${id}`,
@@ -25,8 +25,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // ページコンポーネント
 export default async function BattlePage({ params }: Props) {
-  // async関数としてparamsからIDを取得
-  const id = params.id;
+  // Next.js 15.xでのサーバーコンポーネントでのパラメータ処理
+  const id = params?.id;
   
   return (
     <Suspense fallback={<div>読み込み中...</div>}>

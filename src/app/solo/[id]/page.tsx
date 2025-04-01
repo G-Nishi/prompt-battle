@@ -20,14 +20,17 @@ interface JapaneseEvaluation {
   '独自性': number;
   '明確さ': number;
   '制約遵守': number;
-  '総合評価': number;
+  '総合評価'?: number; // 古いレスポンスとの互換性のため
   'コメント': string;
+  '模範プロンプト例'?: string; // 新しく追加された項目（オプショナル）
+  '悪いプロンプト例'?: string; // 新しく追加された項目（オプショナル）
 }
 
 export default function SoloBattlePage({ params }: Props) {
-  // クライアントコンポーネントでのパラメーターアクセス
-  // 1. paramsプロパティから変数を作成する方法
-  const id = params?.id;
+  // Next.js 15.xでの推奨方法でparamsを取得
+  const pageParams = useParams();
+  const id = pageParams.id as string;
+  
   // バックアップ: IDが取得できない場合に備えて
   const router = useRouter();
   
@@ -196,8 +199,8 @@ export default function SoloBattlePage({ params }: Props) {
 
   // プログレスバー表示
   const ScoreProgress = ({ score, label, color }: { score: number, label: string, color: string }) => {
-    // 0-10スケールから0-20スケールに変換（OpenAI APIは0-10で評価）
-    const displayScore = Math.round(score * 2);
+    // すべてのスコアは0-20スケール
+    const displayScore = Math.round(score);
     
     return (
       <div className="mb-3">
@@ -265,40 +268,83 @@ export default function SoloBattlePage({ params }: Props) {
                 
                 <ScoreProgress 
                   score={evaluation['精度']} 
-                  label="お題との関連性" 
+                  label="精度" 
                   color="bg-blue-600" 
                 />
                 
                 <ScoreProgress 
+                  score={evaluation['出力の質']} 
+                  label="出力の質" 
+                  color="bg-green-600" 
+                />
+                
+                <ScoreProgress 
                   score={evaluation['独自性']} 
-                  label="創造性と独自性" 
+                  label="独自性" 
                   color="bg-purple-600" 
                 />
                 
                 <ScoreProgress 
                   score={evaluation['明確さ']} 
-                  label="明確さと具体性" 
-                  color="bg-green-600" 
+                  label="明確さ" 
+                  color="bg-yellow-500" 
                 />
                 
                 <ScoreProgress 
                   score={evaluation['制約遵守']} 
-                  label="効果的な指示" 
+                  label="制約遵守" 
                   color="bg-orange-500" 
                 />
                 
                 <div className="mt-4 flex items-center">
-                  <div className="text-xl font-bold mr-3">合計: {Math.round(evaluation['総合評価'] * 10)}/100</div>
+                  <div className="text-xl font-bold mr-3">合計: {
+                    // 各項目の合計を計算（0以下の値は0として扱う）
+                    Math.round(
+                      (evaluation['精度'] || 0) +
+                      (evaluation['出力の質'] || 0) +
+                      (evaluation['独自性'] || 0) +
+                      (evaluation['明確さ'] || 0) +
+                      (evaluation['制約遵守'] || 0)
+                    )
+                  }/100</div>
                   <div className="flex-1 h-4 bg-gray-200 rounded-full">
                     <div 
                       className={`h-4 rounded-full ${
-                        Math.round(evaluation['総合評価'] * 10) >= 80 ? 'bg-green-600' : 
-                        Math.round(evaluation['総合評価'] * 10) >= 60 ? 'bg-blue-600' : 
-                        Math.round(evaluation['総合評価'] * 10) >= 40 ? 'bg-yellow-500' : 'bg-red-600'
+                        // 各項目の合計に基づいて色を決定
+                        Math.round(
+                          (evaluation['精度'] || 0) +
+                          (evaluation['出力の質'] || 0) +
+                          (evaluation['独自性'] || 0) +
+                          (evaluation['明確さ'] || 0) +
+                          (evaluation['制約遵守'] || 0)
+                        ) >= 80 ? 'bg-green-600' : 
+                        Math.round(
+                          (evaluation['精度'] || 0) +
+                          (evaluation['出力の質'] || 0) +
+                          (evaluation['独自性'] || 0) +
+                          (evaluation['明確さ'] || 0) +
+                          (evaluation['制約遵守'] || 0)
+                        ) >= 60 ? 'bg-blue-600' : 
+                        Math.round(
+                          (evaluation['精度'] || 0) +
+                          (evaluation['出力の質'] || 0) +
+                          (evaluation['独自性'] || 0) +
+                          (evaluation['明確さ'] || 0) +
+                          (evaluation['制約遵守'] || 0)
+                        ) >= 40 ? 'bg-yellow-500' : 'bg-red-600'
                       }`} 
-                      style={{ width: `${Math.round(evaluation['総合評価'] * 10)}%` }}
+                      style={{ width: `${
+                        // 各項目の合計をパーセンテージに変換
+                        Math.round(
+                          (evaluation['精度'] || 0) +
+                          (evaluation['出力の質'] || 0) +
+                          (evaluation['独自性'] || 0) +
+                          (evaluation['明確さ'] || 0) +
+                          (evaluation['制約遵守'] || 0)
+                        )
+                      }%` }}
                     >
-                      {/* 0-10を0-100%に変換 */}
+                      {/* フロントエンドで再計算 */}
                     </div>
                   </div>
                 </div>
@@ -311,7 +357,29 @@ export default function SoloBattlePage({ params }: Props) {
                 </div>
               </div>
               
-              <div className="flex flex-wrap gap-4">
+              {(evaluation['模範プロンプト例'] || evaluation['悪いプロンプト例']) && (
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {evaluation['模範プロンプト例'] && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2 text-green-700">模範プロンプト例:</h3>
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <p className="whitespace-pre-line text-gray-900 font-medium">{evaluation['模範プロンプト例']}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {evaluation['悪いプロンプト例'] && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2 text-red-700">改善を要するプロンプト例:</h3>
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <p className="whitespace-pre-line text-gray-900 font-medium">{evaluation['悪いプロンプト例']}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex flex-wrap gap-4 mt-8">
                 <button
                   onClick={handleRetry}
                   className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"

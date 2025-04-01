@@ -89,15 +89,8 @@ export async function PUT(request: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: `あなたはAIによるプロンプト評価システムです。  
-二人のユーザーが同じお題に対して作成したプロンプトとそれに対するAIの回答を比較評価し、優れた方を選んでください。
+          content: `あなたはプロンプトの品質を評価する専門家です。以下の5つの基準に基づいて、AIに対するプロンプトの評価を行ってください。
 
-【入力情報】  
-- **お題**: AIが出題したお題  
-- **プロンプト1の回答**: 1人目のユーザーのプロンプトに基づくAIの回答
-- **プロンプト2の回答**: 2人目のユーザーのプロンプトに基づくAIの回答
-
-【評価基準】  
 1. **精度（Relevance）**: プロンプトが適切で、AIが正しく理解しやすいか？  
 2. **出力の質（Quality）**: AIの回答が論理的で、まとまりがあり、適切な内容になっているか？  
 3. **独自性（Creativity）**: 他の人と差別化できる工夫がされているか？  
@@ -106,28 +99,32 @@ export async function PUT(request: NextRequest) {
 
 【出力フォーマット】  
 回答を詳しく分析し、以下のJSON形式で出力してください。
+各評価項目は0-20の範囲で評価してください。
+総合評価は含めないでください。アプリ側で計算します。
+
+また、このお題に対する「模範的なプロンプト例」と「改善が必要なプロンプト例」を提示してください。
 
 {
   "プレイヤー1": {
-    "精度": <0-10の数値>,
-    "出力の質": <0-10の数値>,
-    "独自性": <0-10の数値>,
-    "明確さ": <0-10の数値>,
-    "制約遵守": <0-10の数値>,
-    "総合評価": <各スコアの平均>,
+    "精度": <0-20の数値>,
+    "出力の質": <0-20の数値>,
+    "独自性": <0-20の数値>,
+    "明確さ": <0-20の数値>,
+    "制約遵守": <0-20の数値>,
     "コメント": "<プロンプトの良かった点・改善点>"
   },
   "プレイヤー2": {
-    "精度": <0-10の数値>,
-    "出力の質": <0-10の数値>,
-    "独自性": <0-10の数値>,
-    "明確さ": <0-10の数値>,
-    "制約遵守": <0-10の数値>,
-    "総合評価": <各スコアの平均>,
+    "精度": <0-20の数値>,
+    "出力の質": <0-20の数値>,
+    "独自性": <0-20の数値>,
+    "明確さ": <0-20の数値>,
+    "制約遵守": <0-20の数値>,
     "コメント": "<プロンプトの良かった点・改善点>"
   },
   "比較評価": "どちらのプロンプトがより優れているか、その理由を含めた総合的な評価（100-150字）",
-  "winnerId": "player1 または player2（総合評価がより高い方）"
+  "winnerId": "player1 または player2（総合評価がより高い方）",
+  "模範プロンプト例": "このお題に対する理想的なプロンプトの例（200-300字程度）",
+  "悪いプロンプト例": "このお題に対する改善が必要なプロンプトの例（100-200字程度）"
 }`
         },
         {
@@ -149,7 +146,37 @@ export async function PUT(request: NextRequest) {
       throw new Error('評価結果の形式が不正です');
     }
     
-    const winner = evaluationJson.winnerId;
+    // 各プレイヤーの総合評価を計算（各項目の合計値）
+    const player1TotalScore = 
+      (evaluationJson.プレイヤー1.精度 || 0) +
+      (evaluationJson.プレイヤー1.出力の質 || 0) +
+      (evaluationJson.プレイヤー1.独自性 || 0) +
+      (evaluationJson.プレイヤー1.明確さ || 0) +
+      (evaluationJson.プレイヤー1.制約遵守 || 0);
+    
+    const player2TotalScore = 
+      (evaluationJson.プレイヤー2.精度 || 0) +
+      (evaluationJson.プレイヤー2.出力の質 || 0) +
+      (evaluationJson.プレイヤー2.独自性 || 0) +
+      (evaluationJson.プレイヤー2.明確さ || 0) +
+      (evaluationJson.プレイヤー2.制約遵守 || 0);
+    
+    // デバッグログ
+    console.log('評価JSON:', JSON.stringify(evaluationJson, null, 2));
+    console.log('プレイヤー1スコア:', evaluationJson.プレイヤー1);
+    console.log('プレイヤー1合計:', player1TotalScore);
+    console.log('プレイヤー2スコア:', evaluationJson.プレイヤー2);
+    console.log('プレイヤー2合計:', player2TotalScore);
+    
+    // 総合評価をレスポンスJSONに追加
+    evaluationJson.プレイヤー1.総合評価 = player1TotalScore;
+    evaluationJson.プレイヤー2.総合評価 = player2TotalScore;
+    
+    // AIが提供したwinnerId、またはスコアから判断
+    const winner = evaluationJson.winnerId || 
+      (player1TotalScore > player2TotalScore ? 'player1' : 
+       player2TotalScore > player1TotalScore ? 'player2' : 'tie');
+    
     const evaluation = evaluationJson.比較評価 || evaluationJson.evaluation;
 
     return NextResponse.json({
@@ -157,7 +184,9 @@ export async function PUT(request: NextRequest) {
       detailedEvaluation: {
         player1: evaluationJson.プレイヤー1,
         player2: evaluationJson.プレイヤー2,
-        summary: evaluationJson.比較評価
+        summary: evaluationJson.比較評価,
+        goodExample: evaluationJson.模範プロンプト例,
+        badExample: evaluationJson.悪いプロンプト例
       },
       winnerId: winner
     });
