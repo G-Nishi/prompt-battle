@@ -55,38 +55,26 @@ export async function POST(request: NextRequest) {
     let response;
     try {
       const responseCompletion = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
-            content: `あなたは高度な文章生成AIです。
-与えられた「お題」と「ユーザーのプロンプト」に従い、適切な回答を生成してください。
+            content: `あなたは文章生成AIです。お題とプロンプトに従って回答を生成してください。
+以下のルールを守ってください：
+1. プロンプトの指示に忠実に従う
+2. 回答は300単語以内で簡潔にまとめる
+3. 不必要な冗長表現を避ける
+4. プロンプトの形式指定があれば優先する
 
-【入力情報】
-- **お題**: AIが出題したお題
-- **プロンプト**: ユーザーが考えた指示
-
-【回答のルール】
-1. **プロンプトに忠実に従うこと**
-   - 文体、長さ、形式などの指示を正確に守る。
-2. **一貫性と論理性を保つこと**
-   - 物語の場合、ストーリーの流れを自然にする。
-   - 説明の場合、明確で分かりやすい文章にする。
-3. **創造性を発揮すること**
-   - 指示の範囲内で、可能な限り独自性を持たせる。
-4. **簡潔で明瞭な文章を作ること**
-   - 余計な冗長表現を避け、分かりやすくする。
-
-【出力フォーマット】
-AIの回答のみを出力してください。`
+回答のみを出力してください。`
           },
           {
             role: "user",
             content: `お題: ${topicTitle}\n${topicDescription || ''}\n\nプロンプト: ${prompt}`
           }
         ],
-        temperature: 0.7,
-        max_tokens: 1000
+        temperature: 0.5,
+        max_tokens: 500
       }).catch(error => {
         console.error('OpenAI API呼び出しエラー:', error);
         throw new Error(`AIレスポンスの生成に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
