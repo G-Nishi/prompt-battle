@@ -119,12 +119,10 @@ function BattleCreator() {
       }
       
       // 対戦作成
-      const battle = await battleAPI.createBattle({
-        topic_id: selectedTopic,
-        player1_id: currentUser.id,
-        player2_id: opponent.id,
-        status: 'waiting'
-      });
+      const battle = await battleAPI.createBattle(
+        selectedTopic,
+        opponent.id
+      );
       
       // 対戦ページにリダイレクト
       router.push(`/battles/${battle.id}`);
