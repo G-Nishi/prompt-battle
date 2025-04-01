@@ -80,7 +80,7 @@ export default function CreateTopic() {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-black placeholder-gray-700"
               placeholder="例: 「地球温暖化対策について提案する」"
               required
             />
@@ -98,7 +98,7 @@ export default function CreateTopic() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={6}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-black placeholder-gray-700"
               placeholder="お題の詳細な説明を入力してください。具体的なコンテキストや評価ポイントなどを含めると良いでしょう。"
               required
             />

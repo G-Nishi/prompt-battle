@@ -4,11 +4,17 @@ import OpenAI from 'openai';
 
 // OpenAI設定
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
 });
 
 export async function POST(request: NextRequest) {
   try {
+    // APIキーチェック
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('OpenAI APIキーが設定されていません');
+      return NextResponse.json({ error: 'APIキーが設定されていません。環境変数を確認してください。' }, { status: 500 });
+    }
+
     // 認証確認 - Next.js App Router方式
     const supabase = createRouteHandlerSupabaseClient(request);
     
@@ -21,6 +27,8 @@ export async function POST(request: NextRequest) {
     // AIによるお題生成
     let topicData: {title: string; description: string};
     try {
+      console.log('OpenAI APIリクエスト開始...');
+      
       const completion = await openai.chat.completions.create({
         model: "gpt-4-turbo-preview",
         messages: [
@@ -56,15 +64,48 @@ export async function POST(request: NextRequest) {
         throw new Error('AIからの応答が空です');
       }
       
-      topicData = JSON.parse(responseContent) as {title: string; description: string};
+      console.log('OpenAI応答:', responseContent); // デバッグ用
+      
+      // マークダウンコードブロックの削除
+      let cleanedResponse = responseContent;
+      
+      // ```json や ``` などのマークダウン記法を削除
+      cleanedResponse = cleanedResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      console.log('クリーニング後:', cleanedResponse); // デバッグ用
+      
+      try {
+        topicData = JSON.parse(cleanedResponse) as {title: string; description: string};
+      } catch (parseError) {
+        console.error('JSON解析エラー:', parseError);
+        console.error('解析しようとした文字列:', cleanedResponse);
+        throw new Error(`JSONの解析に失敗しました: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      }
       
       // 基本的な検証
       if (!topicData.title || !topicData.description) {
         throw new Error('生成されたお題が不完全です');
       }
     } catch (error: unknown) {
-      console.error('お題生成エラー:', error);
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      console.error('お題生成エラー詳細:', error);
+      
+      // OpenAI APIのエラー型の詳細な情報を取得
+      let errorMessage = '不明なエラー';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('エラー種別:', error.name);
+        console.error('スタックトレース:', error.stack);
+        
+        // OpenAIのAPIエラーオブジェクトの場合
+        const apiError = error as any;
+        if (apiError.status) {
+          console.error('APIステータス:', apiError.status);
+        }
+        if (apiError.headers) {
+          console.error('APIヘッダー:', apiError.headers);
+        }
+      }
+      
       return NextResponse.json(
         { error: `お題の生成に失敗しました: ${errorMessage}` },
         { status: 500 }

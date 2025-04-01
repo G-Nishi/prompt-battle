@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 
 // OpenAI設定
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
 });
 
 export async function POST(request: NextRequest) {
@@ -47,25 +47,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ユーザーIDが取得できませんでした' }, { status: 500 });
     }
 
+    // APIキーチェック
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('OpenAI APIキーが設定されていません');
+      return NextResponse.json({ error: 'APIキーが設定されていません。環境変数を確認してください。' }, { status: 500 });
+    }
+
     // AIによるアバター画像生成のプロンプト
     try {
-      // OpenAI APIが利用可能かどうかをチェック
-      if (!process.env.OPENAI_KEY) {
-        console.warn('OpenAI APIキーが設定されていないため、デフォルトアバターを使用します');
-        // アバターなしで基本的なプロファイルを作成
-        await createProfileWithoutAvatar(supabase, userId, username);
-        
-        return NextResponse.json({
-          success: true,
-          message: 'ユーザー登録が完了しました（デフォルトアバター）',
-          user: {
-            id: userId,
-            email: email,
-            username: username
-          }
-        });
-      }
-      
       const imagePrompt = `A creative, colorful profile avatar for a user named ${username}. Digital art style, vibrant colors, suitable as a profile picture, centered composition, white background.`;
       
       // OpenAIを使用して画像を生成
@@ -82,7 +71,7 @@ export async function POST(request: NextRequest) {
       if (!imageUrl) {
         console.warn('画像URLが取得できなかったため、デフォルトアバターを使用します');
         // アバターなしで基本的なプロファイルを作成
-        await createProfileWithoutAvatar(supabase, userId, username);
+        await createProfileWithoutAvatar(supabase, userId, username, email);
         
         return NextResponse.json({
           success: true,
@@ -132,6 +121,7 @@ export async function POST(request: NextRequest) {
           .upsert({
             id: userId,
             username: username,
+            email: email,
             created_at: new Date().toISOString()
           });
           
@@ -177,13 +167,15 @@ export async function POST(request: NextRequest) {
 async function createProfileWithoutAvatar(
   supabase: ReturnType<typeof createRouteHandlerSupabaseClient>,
   userId: string,
-  username: string
+  username: string,
+  email: string
 ) {
   const { error } = await supabase
     .from('users')
     .upsert({
       id: userId,
       username: username,
+      email: email,
       created_at: new Date().toISOString()
     });
     

@@ -3,12 +3,18 @@ import OpenAI from 'openai';
 
 // サーバーサイドのみで実行される
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
 });
 
 // AIレスポンス生成
 export async function POST(request: NextRequest) {
   try {
+    // APIキーチェック
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('OpenAI APIキーが設定されていません');
+      return NextResponse.json({ error: 'APIキーが設定されていません。環境変数を確認してください。' }, { status: 500 });
+    }
+
     const { prompt, topic } = await request.json();
 
     if (!prompt || !topic) {

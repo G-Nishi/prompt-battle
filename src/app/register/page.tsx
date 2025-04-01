@@ -67,16 +67,41 @@ export default function Register() {
       }, 1000);
     } catch (error) {
       console.error('登録処理エラー:', error);
-      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
-      setError(`アカウント登録に失敗しました: ${errorMessage}`);
+      // エラーオブジェクトの詳細情報を出力
+      if (error instanceof Error) {
+        console.error('エラー詳細:', { 
+          message: error.message, 
+          name: error.name, 
+          stack: error.stack 
+        });
+        setError(`アカウント登録に失敗しました: ${error.message}`);
+      } else if (typeof error === 'object' && error !== null) {
+        // オブジェクトの場合はJSONに変換して詳細を出力
+        try {
+          console.error('エラー詳細 (オブジェクト):', JSON.stringify(error));
+          // 安全にプロパティにアクセス
+          const errorObj = error as Record<string, unknown>;
+          const errorMsg = 
+            typeof errorObj.message === 'string' ? errorObj.message : 
+            typeof errorObj.error === 'string' ? errorObj.error : 
+            JSON.stringify(error);
+          setError(`アカウント登録に失敗しました: ${errorMsg}`);
+        } catch (e) {
+          console.error('エラー出力中にエラー:', e);
+          setError('アカウント登録に失敗しました: 不明なエラーが発生しました');
+        }
+      } else {
+        console.error('未知のエラー形式:', typeof error);
+        setError('アカウント登録に失敗しました: 不明なエラーが発生しました');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-md">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-md dark:bg-white">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             アカウント登録
@@ -108,7 +133,7 @@ export default function Register() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-700 text-black bg-white rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="ユーザー名"
               />
             </div>
@@ -124,7 +149,7 @@ export default function Register() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-700 text-black bg-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="メールアドレス"
               />
             </div>
@@ -140,8 +165,9 @@ export default function Register() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-700 text-black bg-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="パスワード"
+                style={{ color: 'black', backgroundColor: 'white' }}
               />
             </div>
             <div>
@@ -156,8 +182,9 @@ export default function Register() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-700 text-black bg-white rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="パスワード（確認）"
+                style={{ color: 'black', backgroundColor: 'white' }}
               />
             </div>
           </div>

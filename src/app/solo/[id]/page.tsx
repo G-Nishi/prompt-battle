@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import { topicAPI } from '@/lib/api';
-import { Topic, SoloEvaluation } from '@/types';
+import { Topic } from '@/types';
 import Link from 'next/link';
 
 type Props = {
@@ -12,6 +12,17 @@ type Props = {
     id: string;
   };
 };
+
+// 日本語キーを使用した評価結果の型定義
+interface JapaneseEvaluation {
+  '精度': number;
+  '出力の質': number;
+  '独自性': number;
+  '明確さ': number;
+  '制約遵守': number;
+  '総合評価': number;
+  'コメント': string;
+}
 
 export default function SoloBattlePage({ params }: Props) {
   // クライアントコンポーネントでのパラメーターアクセス
@@ -26,7 +37,7 @@ export default function SoloBattlePage({ params }: Props) {
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<string | null>(null);
-  const [evaluation, setEvaluation] = useState<SoloEvaluation | null>(null);
+  const [evaluation, setEvaluation] = useState<JapaneseEvaluation | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -184,20 +195,27 @@ export default function SoloBattlePage({ params }: Props) {
   };
 
   // プログレスバー表示
-  const ScoreProgress = ({ score, label, color }: { score: number, label: string, color: string }) => (
-    <div className="mb-3">
-      <div className="flex justify-between mb-1">
-        <span className="text-gray-700 font-medium">{label}</span>
-        <span className="text-gray-700">{score}/20</span>
+  const ScoreProgress = ({ score, label, color }: { score: number, label: string, color: string }) => {
+    // 0-10スケールから0-20スケールに変換（OpenAI APIは0-10で評価）
+    const displayScore = Math.round(score * 2);
+    
+    return (
+      <div className="mb-3">
+        <div className="flex justify-between mb-1">
+          <span className="text-gray-700 font-medium">{label}</span>
+          <span className="text-gray-700">{displayScore}/20</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div 
+            className={`h-2.5 rounded-full ${color}`} 
+            style={{ width: `${displayScore * 5}%` }} 
+          >
+            {/* 0-20を0-100%に変換 */}
+          </div>
+        </div>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
-        <div 
-          className={`h-2.5 rounded-full ${color}`} 
-          style={{ width: `${(score / 20) * 100}%` }}
-        ></div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -246,40 +264,42 @@ export default function SoloBattlePage({ params }: Props) {
                 <h3 className="font-semibold text-lg mb-4 text-gray-700">スコア評価:</h3>
                 
                 <ScoreProgress 
-                  score={evaluation.relevance} 
+                  score={evaluation['精度']} 
                   label="お題との関連性" 
                   color="bg-blue-600" 
                 />
                 
                 <ScoreProgress 
-                  score={evaluation.creativity} 
+                  score={evaluation['独自性']} 
                   label="創造性と独自性" 
                   color="bg-purple-600" 
                 />
                 
                 <ScoreProgress 
-                  score={evaluation.clarity} 
+                  score={evaluation['明確さ']} 
                   label="明確さと具体性" 
                   color="bg-green-600" 
                 />
                 
                 <ScoreProgress 
-                  score={evaluation.effectiveness} 
+                  score={evaluation['制約遵守']} 
                   label="効果的な指示" 
                   color="bg-orange-500" 
                 />
                 
                 <div className="mt-4 flex items-center">
-                  <div className="text-xl font-bold mr-3">合計: {evaluation.total}/100</div>
+                  <div className="text-xl font-bold mr-3">合計: {Math.round(evaluation['総合評価'] * 10)}/100</div>
                   <div className="flex-1 h-4 bg-gray-200 rounded-full">
                     <div 
                       className={`h-4 rounded-full ${
-                        evaluation.total >= 80 ? 'bg-green-600' : 
-                        evaluation.total >= 60 ? 'bg-blue-600' : 
-                        evaluation.total >= 40 ? 'bg-yellow-500' : 'bg-red-600'
+                        Math.round(evaluation['総合評価'] * 10) >= 80 ? 'bg-green-600' : 
+                        Math.round(evaluation['総合評価'] * 10) >= 60 ? 'bg-blue-600' : 
+                        Math.round(evaluation['総合評価'] * 10) >= 40 ? 'bg-yellow-500' : 'bg-red-600'
                       }`} 
-                      style={{ width: `${evaluation.total}%` }}
-                    ></div>
+                      style={{ width: `${Math.round(evaluation['総合評価'] * 10)}%` }}
+                    >
+                      {/* 0-10を0-100%に変換 */}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -287,7 +307,7 @@ export default function SoloBattlePage({ params }: Props) {
               <div className="mt-8">
                 <h3 className="font-semibold text-lg mb-2 text-gray-700">評価コメント:</h3>
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <p className="whitespace-pre-line text-gray-900 font-medium">{evaluation.comment}</p>
+                  <p className="whitespace-pre-line text-gray-900 font-medium">{evaluation['コメント']}</p>
                 </div>
               </div>
               
@@ -325,7 +345,7 @@ export default function SoloBattlePage({ params }: Props) {
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="お題に沿ったプロンプトを入力..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white text-black placeholder-gray-700"
                     required
                   />
                 </div>

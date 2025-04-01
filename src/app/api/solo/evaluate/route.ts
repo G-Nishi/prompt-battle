@@ -4,11 +4,17 @@ import OpenAI from 'openai';
 
 // OpenAI設定
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_KEY || "デフォルトのキー（本番環境では置き換えてください）",
+  apiKey: process.env.OPENAI_API_KEY || "デフォルトのキー（本番環境では置き換えてください）",
 });
 
 export async function POST(request: NextRequest) {
   try {
+    // APIキーチェック
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('OpenAI APIキーが設定されていません');
+      return NextResponse.json({ error: 'APIキーが設定されていません。環境変数を確認してください。' }, { status: 500 });
+    }
+    
     const { prompt, topicId, topicTitle, topicDescription } = await request.json();
     
     // 入力検証
@@ -161,7 +167,24 @@ AIの回答: 「霧深い学び舎に響く謎の足音。黒衣の教師は幽�
         throw new Error('評価結果が空です');
       }
       
-      evaluation = JSON.parse(evaluationContent);
+      console.log('OpenAI評価応答:', evaluationContent); // デバッグ用
+      
+      // マークダウンコードブロックの削除
+      let cleanedEvaluation = evaluationContent;
+      
+      // ```json や ``` などのマークダウン記法を削除
+      cleanedEvaluation = cleanedEvaluation.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      console.log('クリーニング後評価:', cleanedEvaluation); // デバッグ用
+      
+      try {
+        evaluation = JSON.parse(cleanedEvaluation);
+      } catch (parseError) {
+        console.error('JSON解析エラー:', parseError);
+        console.error('解析しようとした文字列:', cleanedEvaluation);
+        throw new Error(`評価JSONの解析に失敗しました: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      }
+    
     } catch (error: unknown) {
       console.error('評価生成エラー:', error);
       const errorMessage = error instanceof Error ? error.message : '不明なエラー';
@@ -173,6 +196,15 @@ AIの回答: 「霧深い学び舎に響く謎の足音。黒衣の教師は幽�
     
     // ソロバトル記録をデータベースに保存
     try {
+      console.log('評価結果:', evaluation); // デバッグ用
+
+      // スコアが小数点の場合は整数に変換
+      let scoreValue = evaluation["総合評価"];
+      // 整数型のカラムに保存するため、小数点以下を切り捨てて整数に変換
+      const intScore = Math.floor(scoreValue);
+
+      console.log('変換前スコア:', scoreValue, '変換後スコア:', intScore); // デバッグ用
+      
       const { data: soloBattle, error } = await supabase
         .from('solo_battles')
         .insert([
@@ -182,7 +214,7 @@ AIの回答: 「霧深い学び舎に響く謎の足音。黒衣の教師は幽�
             prompt: prompt,
             response: response,
             evaluation: JSON.stringify(evaluation),
-            score: evaluation["総合評価"]
+            score: intScore // 整数値に変換
           }
         ])
         .select()

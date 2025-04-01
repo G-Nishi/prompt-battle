@@ -170,7 +170,7 @@ function BattleCreator() {
               id="topic"
               value={selectedTopic}
               onChange={(e) => setSelectedTopic(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-black"
               required
             >
               <option value="">お題を選択してください</option>
@@ -224,7 +224,7 @@ function BattleCreator() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       placeholder="ユーザー名で検索..."
-                      className="flex-grow px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="flex-grow px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-black placeholder-gray-500"
                     />
                     <button
                       type="button"
@@ -271,7 +271,7 @@ function BattleCreator() {
                     value={opponentEmail}
                     onChange={(e) => setOpponentEmail(e.target.value)}
                     placeholder="対戦相手のメールアドレスを入力..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-black placeholder-gray-500"
                   />
                   <p className="text-sm text-gray-500 mt-1">
                     メールアドレスで対戦相手を招待することもできます。招待されたユーザーには通知が送られます。
